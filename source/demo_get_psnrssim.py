@@ -1,6 +1,7 @@
 import argparse
 import glob
 import os
+from metrics import calculate_psnr_ssim
 import cv2
 import torch
 import torchvision
@@ -27,8 +28,9 @@ def read_pytorch_lightning_state_dict(ckpt):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--checkpoint", type=str, default="../pretrained/afifi.pth")
-parser.add_argument("--input_dir", type=str, default="samples")
-parser.add_argument("--output_dir", type=str, default="output")
+parser.add_argument("--input_dir", type=str, default="/data2/shaun/datasets/exposure_correction/exposure_errors/testing/INPUT_IMAGES")
+parser.add_argument("--output_dir", type=str, default="output_images")
+parser.add_argument("--gt_dir", type=str, default="/data2/shaun/datasets/exposure_correction/exposure_errors/testing/expert_c_testing_set/")
 parser.add_argument("--device", type=str, default="cuda:0")
 args = parser.parse_args()
 
@@ -44,8 +46,11 @@ if not os.path.exists(args.output_dir):
 
 input_images = glob.glob(os.path.join(args.input_dir, "*"))
 
-for path in tqdm(input_images, total=len(input_images), desc="Running PSENet..."):
+for path in tqdm(input_images, desc="Processing & saving images", total=len(input_images)):
+    print("Process:", path)
     image = read_image(path).cuda()
     with torch.no_grad():
         output, _ = model(image)
     torchvision.utils.save_image(output, path.replace(args.input_dir, args.output_dir))
+
+calculate_psnr_ssim(args.input_dir, args.gt_dir)
